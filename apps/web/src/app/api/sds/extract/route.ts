@@ -49,10 +49,17 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json({ providers: {}, meta: { textChars: chars, warnings } });
   }
 
-  const settled = await Promise.all(
-    requested.map(async (name) => [name, await RUNNERS[name](text)] as const),
+  const results = await Promise.all(
+    requested.map(async (name) => {
+      try {
+        return [name, await RUNNERS[name](text)] as const;
+      } catch (e) {
+        const result: ProviderResult = { ok: false, error: String(e) };
+        return [name, result] as const;
+      }
+    }),
   );
-  const providers = Object.fromEntries(settled) as Partial<Record<ProviderName, ProviderResult>>;
+  const providers = Object.fromEntries(results) as Partial<Record<ProviderName, ProviderResult>>;
 
   return Response.json({ providers, meta: { textChars: chars, warnings } });
 }

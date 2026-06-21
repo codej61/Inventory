@@ -51,4 +51,13 @@ describe("POST /api/sds/extract", () => {
     expect(claudeMock).toHaveBeenCalledOnce();
     expect(geminiMock).toHaveBeenCalledOnce();
   });
+
+  it("isolates a provider that throws (still 200)", async () => {
+    claudeMock.mockRejectedValueOnce(new Error("kaboom"));
+    const res = await POST(makeRequest({ file: pdfBlob(), providers: "claude,gemini" }));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.providers.claude.ok).toBe(false);
+    expect(body.providers.gemini.ok).toBe(false);
+  });
 });
