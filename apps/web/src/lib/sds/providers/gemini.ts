@@ -3,6 +3,8 @@ import { zodToJsonSchema } from "zod-to-json-schema";
 import { SdsExtractionSchema, EXTRACTION_PROMPT } from "@/lib/sds/schema";
 import type { ProviderResult } from "@/lib/sds/providers/types";
 
+const RESPONSE_JSON_SCHEMA = zodToJsonSchema(SdsExtractionSchema);
+
 export async function extractWithGemini(text: string): Promise<ProviderResult> {
   if (!process.env.GOOGLE_API_KEY) {
     return { ok: false, error: "GOOGLE_API_KEY is not set." };
@@ -17,7 +19,7 @@ export async function extractWithGemini(text: string): Promise<ProviderResult> {
       contents: `${EXTRACTION_PROMPT}\n\n--- SDS TEXT ---\n${text}`,
       config: {
         responseMimeType: "application/json",
-        responseSchema: zodToJsonSchema(SdsExtractionSchema),
+        responseSchema: RESPONSE_JSON_SCHEMA,
       },
     });
     const raw = response.text;

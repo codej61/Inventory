@@ -21,6 +21,11 @@ describe("extractWithGemini", () => {
     });
     const result = await extractWithGemini("sds text");
     expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data).toBeDefined();
+      expect(result.model).toBe("gemini-2.5-flash-lite");
+      expect(typeof result.latencyMs).toBe("number");
+    }
   });
 
   it("returns a failure when the key is missing", async () => {
@@ -32,6 +37,12 @@ describe("extractWithGemini", () => {
 
   it("returns a failure when the response is not valid JSON", async () => {
     generateContentMock.mockResolvedValue({ text: "not json" });
+    const result = await extractWithGemini("text");
+    expect(result.ok).toBe(false);
+  });
+
+  it("returns a failure when valid JSON fails schema validation", async () => {
+    generateContentMock.mockResolvedValue({ text: JSON.stringify({ identification: "not-an-object" }) });
     const result = await extractWithGemini("text");
     expect(result.ok).toBe(false);
   });
