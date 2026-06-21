@@ -1,9 +1,9 @@
 import { GoogleGenAI } from "@google/genai";
-import { zodToJsonSchema } from "zod-to-json-schema";
+import { z } from "zod";
 import { SdsExtractionSchema, EXTRACTION_PROMPT } from "@/lib/sds/schema";
 import type { ProviderResult } from "@/lib/sds/providers/types";
 
-const RESPONSE_JSON_SCHEMA = zodToJsonSchema(SdsExtractionSchema);
+const RESPONSE_JSON_SCHEMA = z.toJSONSchema(SdsExtractionSchema) as Record<string, unknown>;
 
 export async function extractWithGemini(text: string): Promise<ProviderResult> {
   if (!process.env.GOOGLE_API_KEY) {
