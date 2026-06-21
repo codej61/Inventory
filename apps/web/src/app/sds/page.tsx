@@ -25,7 +25,7 @@ export default function SdsPage() {
       <p className="text-zinc-600 dark:text-zinc-400">
         Upload a Safety Data Sheet PDF, choose a model, and extract all 16 GHS sections.
       </p>
-      <SdsUploader onResult={setResult} />
+      <SdsUploader onResult={setResult} onStart={() => setResult(null)} />
 
       {result?.meta.warnings.map((w) => (
         <p key={w} className="rounded bg-amber-100 p-3 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
@@ -37,7 +37,7 @@ export default function SdsPage() {
         <>
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-medium">Results</h2>
-            <button onClick={download} className="rounded border px-3 py-1 text-sm">
+            <button type="button" onClick={download} className="rounded border px-3 py-1 text-sm">
               Download JSON
             </button>
           </div>

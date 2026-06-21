@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import type { ProviderName } from "@/lib/sds/providers/types";
 
 export interface ExtractResponse {
@@ -8,11 +8,12 @@ export interface ExtractResponse {
   meta: { textChars: number; warnings: string[] };
 }
 
-export function SdsUploader({ onResult }: { onResult: (r: ExtractResponse) => void }) {
+export function SdsUploader({ onResult, onStart }: { onResult: (r: ExtractResponse) => void; onStart?: () => void }) {
   const [file, setFile] = useState<File | null>(null);
   const [providers, setProviders] = useState<ProviderName[]>(["claude"]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   function toggle(p: ProviderName) {
     setProviders((cur) => (cur.includes(p) ? cur.filter((x) => x !== p) : [...cur, p]));
@@ -20,6 +21,7 @@ export function SdsUploader({ onResult }: { onResult: (r: ExtractResponse) => vo
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    onStart?.();
     setError(null);
     if (!file) return setError("Choose a PDF first.");
     if (providers.length === 0) return setError("Pick at least one model.");
@@ -32,6 +34,8 @@ export function SdsUploader({ onResult }: { onResult: (r: ExtractResponse) => vo
       const body = await res.json();
       if (!res.ok) throw new Error(body.error ?? "Extraction failed.");
       onResult(body as ExtractResponse);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      setFile(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -46,6 +50,7 @@ export function SdsUploader({ onResult }: { onResult: (r: ExtractResponse) => vo
         accept="application/pdf"
         onChange={(e) => setFile(e.target.files?.[0] ?? null)}
         className="block"
+        ref={fileInputRef}
       />
       <fieldset className="flex gap-4">
         <legend className="mb-1 font-medium">Model(s)</legend>
