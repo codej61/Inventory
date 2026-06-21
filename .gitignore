@@ -18,3 +18,12 @@ npm-debug.log*
 
 # os / editor
 .DS_Store
+
+
+
+.nx/cache
+.nx/workspace-data
+.nx/migrate-runs
+.nx/polygraph
+.claude/worktrees
+.claude/settings.local.json
