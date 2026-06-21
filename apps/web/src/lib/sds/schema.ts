@@ -18,9 +18,9 @@ const component = z.object({
   casNumber: ns(),
   ecNumber: ns(),
   concentration: ns(),
-});
+}).partial();
 
-const statement = z.object({ code: ns(), text: ns() });
+const statement = z.object({ code: ns(), text: ns() }).partial();
 
 export const SdsExtractionSchema = z
   .object({

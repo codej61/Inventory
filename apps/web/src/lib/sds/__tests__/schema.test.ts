@@ -33,4 +33,9 @@ describe("SdsExtractionSchema", () => {
   it("has a non-empty shared prompt", () => {
     expect(EXTRACTION_PROMPT.length).toBeGreaterThan(50);
   });
+
+  it("accepts a component missing optional fields (sparse array element)", () => {
+    const sample = { composition: { components: [{ name: "Water", casNumber: "7732-18-5" }] } };
+    expect(SdsExtractionSchema.safeParse(sample).success).toBe(true);
+  });
 });
