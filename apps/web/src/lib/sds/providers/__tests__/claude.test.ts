@@ -21,7 +21,11 @@ describe("extractWithClaude", () => {
     });
     const result = await extractWithClaude("some sds text");
     expect(result.ok).toBe(true);
-    if (result.ok) expect(result.model).toBe("claude-haiku-4-5");
+    if (result.ok) {
+      expect(result.model).toBe("claude-haiku-4-5");
+      expect(result.data).toEqual({ identification: null, hazardsIdentification: null });
+      expect(result.latencyMs).toBeGreaterThanOrEqual(0);
+    }
   });
 
   it("returns a failure when the key is missing", async () => {
@@ -35,5 +39,6 @@ describe("extractWithClaude", () => {
     parseMock.mockRejectedValue(new Error("boom"));
     const result = await extractWithClaude("text");
     expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toMatch(/boom/);
   });
 });

@@ -3,9 +3,8 @@ import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { SdsExtractionSchema, EXTRACTION_PROMPT } from "@/lib/sds/schema";
 import type { ProviderResult } from "@/lib/sds/providers/types";
 
-const MODEL = process.env.CLAUDE_MODEL ?? "claude-haiku-4-5";
-
 export async function extractWithClaude(text: string): Promise<ProviderResult> {
+  const model = process.env.CLAUDE_MODEL ?? "claude-haiku-4-5";
   if (!process.env.ANTHROPIC_API_KEY) {
     return { ok: false, error: "ANTHROPIC_API_KEY is not set." };
   }
@@ -13,7 +12,7 @@ export async function extractWithClaude(text: string): Promise<ProviderResult> {
   const start = Date.now();
   try {
     const response = await client.messages.parse({
-      model: MODEL,
+      model,
       max_tokens: 16000,
       messages: [
         { role: "user", content: `${EXTRACTION_PROMPT}\n\n--- SDS TEXT ---\n${text}` },
@@ -26,7 +25,7 @@ export async function extractWithClaude(text: string): Promise<ProviderResult> {
     return {
       ok: true,
       data: response.parsed_output,
-      model: MODEL,
+      model,
       latencyMs: Date.now() - start,
     };
   } catch (err) {
