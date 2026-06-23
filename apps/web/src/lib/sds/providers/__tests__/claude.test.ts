@@ -1,42 +1,73 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const parseMock = vi.fn();
-vi.mock("@anthropic-ai/sdk", () => ({
-  default: class {
-    messages = { parse: parseMock };
+const createMock = vi.fn();
+vi.mock("@anthropic-ai/bedrock-sdk", () => ({
+  AnthropicBedrock: class {
+    messages = { create: createMock };
   },
 }));
 
 import { extractWithClaude } from "@/lib/sds/providers/claude";
+import { SDS_SECTION_LABELS } from "@/lib/sds/schema";
+
+// Provider now prompts for JSON and validates client-side, so the mocked
+// response must be a text block whose JSON satisfies the (strict) schema —
+// every section key present, null when absent.
+const allNullSections = () =>
+  Object.fromEntries(Object.keys(SDS_SECTION_LABELS).map((k) => [k, null]));
+
+const textResponse = (text: string) => ({ content: [{ type: "text", text }] });
 
 describe("extractWithClaude", () => {
   beforeEach(() => {
-    parseMock.mockReset();
-    process.env.ANTHROPIC_API_KEY = "test-key";
+    createMock.mockReset();
+    process.env.AWS_ACCESS_KEY_ID = "test-key";
   });
 
-  it("returns ok with parsed data on success", async () => {
-    parseMock.mockResolvedValue({
-      parsed_output: { identification: null, hazardsIdentification: null },
-    });
+  it("returns ok with parsed+validated data on success", async () => {
+    const data = allNullSections();
+    createMock.mockResolvedValue(textResponse(JSON.stringify(data)));
     const result = await extractWithClaude("some sds text");
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.model).toBe("claude-haiku-4-5");
-      expect(result.data).toEqual({ identification: null, hazardsIdentification: null });
+      expect(result.model).toBe("us.anthropic.claude-haiku-4-5-20251001-v1:0");
+      expect(result.data).toEqual(data);
       expect(result.latencyMs).toBeGreaterThanOrEqual(0);
     }
   });
 
+  it("strips a ```json markdown fence before parsing", async () => {
+    const data = allNullSections();
+    createMock.mockResolvedValue(
+      textResponse("```json\n" + JSON.stringify(data) + "\n```"),
+    );
+    const result = await extractWithClaude("some sds text");
+    expect(result.ok).toBe(true);
+  });
+
   it("returns a failure when the key is missing", async () => {
-    delete process.env.ANTHROPIC_API_KEY;
+    delete process.env.AWS_ACCESS_KEY_ID;
     const result = await extractWithClaude("text");
     expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.error).toMatch(/ANTHROPIC_API_KEY/);
+    if (!result.ok) expect(result.error).toMatch(/AWS_ACCESS_KEY_ID/);
+  });
+
+  it("returns a failure when the response is not valid JSON", async () => {
+    createMock.mockResolvedValue(textResponse("not json"));
+    const result = await extractWithClaude("text");
+    expect(result.ok).toBe(false);
+  });
+
+  it("returns a failure when valid JSON fails schema validation", async () => {
+    createMock.mockResolvedValue(
+      textResponse(JSON.stringify({ identification: "not-an-object" })),
+    );
+    const result = await extractWithClaude("text");
+    expect(result.ok).toBe(false);
   });
 
   it("returns a failure when the SDK throws", async () => {
-    parseMock.mockRejectedValue(new Error("boom"));
+    createMock.mockRejectedValue(new Error("boom"));
     const result = await extractWithClaude("text");
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error).toMatch(/boom/);

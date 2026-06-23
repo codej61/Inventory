@@ -8,6 +8,11 @@ vi.mock("@google/genai", () => ({
 }));
 
 import { extractWithGemini } from "@/lib/sds/providers/gemini";
+import { SDS_SECTION_LABELS } from "@/lib/sds/schema";
+
+// Strict structured outputs: every section key is required (null when absent).
+const allNullSections = () =>
+  Object.fromEntries(Object.keys(SDS_SECTION_LABELS).map((k) => [k, null]));
 
 describe("extractWithGemini", () => {
   beforeEach(() => {
@@ -17,7 +22,7 @@ describe("extractWithGemini", () => {
 
   it("returns ok with parsed+validated data on success", async () => {
     generateContentMock.mockResolvedValue({
-      text: JSON.stringify({ identification: null, hazardsIdentification: null }),
+      text: JSON.stringify(allNullSections()),
     });
     const result = await extractWithGemini("sds text");
     expect(result.ok).toBe(true);
