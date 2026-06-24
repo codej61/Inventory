@@ -33,6 +33,31 @@ describe("extractWithGemini", () => {
     }
   });
 
+  it("captures token usage from usageMetadata", async () => {
+    generateContentMock.mockResolvedValue({
+      text: JSON.stringify(allNullSections()),
+      usageMetadata: {
+        promptTokenCount: 1200,
+        candidatesTokenCount: 350,
+        cachedContentTokenCount: 800,
+      },
+    });
+    const result = await extractWithGemini("sds text");
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.usage).toEqual({ input: 1200, output: 350, cachedInput: 800 });
+    }
+  });
+
+  it("defaults usage to zero when usageMetadata is absent", async () => {
+    generateContentMock.mockResolvedValue({
+      text: JSON.stringify(allNullSections()),
+    });
+    const result = await extractWithGemini("sds text");
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.usage).toEqual({ input: 0, output: 0 });
+  });
+
   it("returns a failure when the key is missing", async () => {
     delete process.env.GOOGLE_API_KEY;
     const result = await extractWithGemini("text");

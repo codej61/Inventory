@@ -3,12 +3,9 @@ import { z } from "zod";
 import { SdsExtractionSchema, EXTRACTION_PROMPT } from "@/lib/sds/schema";
 import type { ProviderResult } from "@/lib/sds/providers/types";
 
-// Bedrock's grammar-constrained structured outputs (output_config.format / strict
-// tools) cap optional (≤24) and union-typed (≤16) parameters. This 16-section GHS
-// schema has ~98 nullable fields and exceeds both. We instead instruct Claude to
-// emit JSON matching the schema and validate it client-side with Zod — the same
-// approach the Gemini provider uses. No grammar compilation, no limits.
-const RESPONSE_JSON_SCHEMA = JSON.stringify(z.toJSONSchema(SdsExtractionSchema));
+const RESPONSE_JSON_SCHEMA = JSON.stringify(
+  z.toJSONSchema(SdsExtractionSchema),
+);
 
 // Claude occasionally wraps JSON in a ```json fence despite instructions.
 function stripJsonFence(raw: string): string {
@@ -17,8 +14,9 @@ function stripJsonFence(raw: string): string {
 }
 
 export async function extractWithClaude(text: string): Promise<ProviderResult> {
+  // `||` (not `??`) so an empty CLAUDE_MODEL="" falls back to the default.
   const model =
-    process.env.CLAUDE_MODEL ?? "us.anthropic.claude-haiku-4-5-20251001-v1:0";
+    process.env.CLAUDE_MODEL || "us.anthropic.claude-haiku-4-5-20251001-v1:0";
   if (!process.env.AWS_ACCESS_KEY_ID) {
     return { ok: false, error: "AWS_ACCESS_KEY_ID is not set." };
   }
@@ -45,12 +43,29 @@ export async function extractWithClaude(text: string): Promise<ProviderResult> {
     try {
       parsed = SdsExtractionSchema.safeParse(JSON.parse(stripJsonFence(raw)));
     } catch {
-      return { ok: false, error: "Claude response could not be parsed as JSON." };
+      return {
+        ok: false,
+        error: "Claude response could not be parsed as JSON.",
+      };
     }
     if (!parsed.success) {
       return { ok: false, error: "Claude output failed schema validation." };
     }
-    return { ok: true, data: parsed.data, model, latencyMs: Date.now() - start };
+    const u = response.usage;
+    const usage = {
+      input: u?.input_tokens ?? 0,
+      output: u?.output_tokens ?? 0,
+      ...(u?.cache_read_input_tokens
+        ? { cachedInput: u.cache_read_input_tokens }
+        : {}),
+    };
+    return {
+      ok: true,
+      data: parsed.data,
+      model,
+      latencyMs: Date.now() - start,
+      usage,
+    };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     return { ok: false, error: `Claude error: ${msg}` };

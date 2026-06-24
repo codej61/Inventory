@@ -36,6 +36,29 @@ describe("extractWithClaude", () => {
     }
   });
 
+  it("captures token usage from the response", async () => {
+    createMock.mockResolvedValue({
+      ...textResponse(JSON.stringify(allNullSections())),
+      usage: {
+        input_tokens: 2000,
+        output_tokens: 600,
+        cache_read_input_tokens: 1500,
+      },
+    });
+    const result = await extractWithClaude("some sds text");
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.usage).toEqual({ input: 2000, output: 600, cachedInput: 1500 });
+    }
+  });
+
+  it("defaults usage to zero when the response omits it", async () => {
+    createMock.mockResolvedValue(textResponse(JSON.stringify(allNullSections())));
+    const result = await extractWithClaude("some sds text");
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.usage).toEqual({ input: 0, output: 0 });
+  });
+
   it("strips a ```json markdown fence before parsing", async () => {
     const data = allNullSections();
     createMock.mockResolvedValue(

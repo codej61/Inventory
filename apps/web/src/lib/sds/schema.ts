@@ -1,10 +1,5 @@
 import { z } from "zod";
 
-// Bedrock structured outputs cap optional parameters at 24. We express
-// "field may be missing" with required-but-nullable fields (key always
-// present, value null when absent) rather than .partial() (key optional) —
-// nullable fields don't count against the optional-parameter limit, and the
-// model emits null for missing data.
 const ns = () => z.string().nullable();
 
 const supplier = z
@@ -82,9 +77,7 @@ export const SdsExtractionSchema = z.object({
         .array(z.object({ component: ns(), type: ns(), value: ns() }))
         .nullable(),
       engineeringControls: ns(),
-      ppe: z
-        .object({ eye: ns(), skin: ns(), respiratory: ns() })
-        .nullable(),
+      ppe: z.object({ eye: ns(), skin: ns(), respiratory: ns() }).nullable(),
     })
     .nullable(),
   physicalChemicalProperties: z
